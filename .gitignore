@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# Environment — never commit secrets
+backend/.env
+
+# Node
+cortex-ui/node_modules/
+cortex-ui/dist/
+cortex-ui/.vite/
+
+# macOS
+.DS_Store
+
+# Claude Code local settings
+.claude/settings.local.json

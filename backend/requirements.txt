@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+qdrant-client
+sentence-transformers
+trafilatura
+youtube-transcript-api
+pymupdf
+groq
+python-dotenv
+httpx
+langchain
+langchain-groq
