@@ -7,179 +7,362 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root {
+      --bg:      #1A1816;
+      --bg2:     #111110;
+      --surface: rgba(255,255,255,0.05);
+      --border:  rgba(255,255,255,0.09);
+      --border2: rgba(255,255,255,0.15);
+      --text:    #EDE9E3;
+      --text2:   #9E9A94;
+      --muted:   #64615C;
+      --accent:  #D97757;
+      --green:   #34d399;
+      --red:     #f87171;
+    }
+
     body {
-      width: 320px;
-      background: #0c0c10;
-      color: #e2e2e8;
+      width: 340px;
+      background: var(--bg);
+      color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
       font-size: 13px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
       overflow: hidden;
     }
 
-    /* ── Header ── */
+    button { cursor: pointer; font-family: inherit; border: none; }
+    input  { font-family: inherit; }
+
+    /* ── Header ─────────────────────────────────────────────────── */
     .header {
       display: flex;
       align-items: center;
-      gap: 9px;
-      padding: 14px 16px 13px;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
+      gap: 8px;
+      padding: 13px 16px;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
     }
+    .header-logo { display: flex; align-items: center; gap: 7px; flex: 1; }
+    .header-wordmark { font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: -.1px; }
+    .header-actions { display: flex; align-items: center; gap: 4px; }
 
-    .logo-icon {
-      width: 28px; height: 28px;
-      background: linear-gradient(135deg, #7c3aed, #a855f7);
-      border-radius: 8px;
+    .icon-btn {
       display: flex; align-items: center; justify-content: center;
-      font-size: 15px;
-      flex-shrink: 0;
-      box-shadow: 0 2px 8px rgba(124,58,237,0.4);
-    }
-
-    .logo-text {
-      font-size: 15px;
-      font-weight: 700;
-      letter-spacing: -0.3px;
-      background: linear-gradient(135deg, #c4b5fd, #e879f9);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .tagline {
-      font-size: 10.5px;
-      color: #484855;
-      margin-left: auto;
-      letter-spacing: 0.04em;
-    }
-
-    /* ── Page card ── */
-    .page-card {
-      margin: 12px 14px;
-      padding: 10px 12px;
-      background: #141418;
-      border: 1px solid rgba(255,255,255,0.07);
-      border-radius: 10px;
-      display: flex;
-      align-items: flex-start;
-      gap: 9px;
-    }
-
-    .favicon-wrap {
-      width: 20px; height: 20px;
-      flex-shrink: 0;
-      margin-top: 1px;
-      border-radius: 4px;
-      overflow: hidden;
-      display: flex; align-items: center; justify-content: center;
-      background: #1e1e26;
-      font-size: 11px;
-      color: #484855;
-    }
-
-    .favicon-wrap img {
-      width: 16px; height: 16px;
-      object-fit: contain;
-    }
-
-    .page-info { min-width: 0; flex: 1; }
-
-    .page-title {
-      font-size: 12.5px;
-      font-weight: 500;
-      color: #d4d4e0;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      margin-bottom: 3px;
-      line-height: 1.3;
-    }
-
-    .page-title.muted { color: #484855; font-style: italic; font-weight: 400; }
-
-    .page-url {
-      font-size: 11px;
-      color: #56566b;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    /* ── Button area ── */
-    .btn-area { padding: 0 14px 14px; }
-
-    button {
-      width: 100%;
-      background: linear-gradient(135deg, #7c3aed, #9333ea);
-      color: #fff;
-      border: none;
-      border-radius: 9px;
-      padding: 11px;
+      width: 26px; height: 26px;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
       font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .icon-btn:hover { background: rgba(255,255,255,.07); color: var(--text2); }
+    .icon-btn.danger:hover { background: rgba(248,113,113,.12); color: var(--red); }
+
+    /* ── Views ──────────────────────────────────────────────────── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── Loading ─────────────────────────────────────────────────── */
+    .loading-view {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 7px;
-      transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
-      font-family: inherit;
-      letter-spacing: 0.01em;
-      box-shadow: 0 2px 14px rgba(124,58,237,0.4);
+      padding: 40px;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 13px;
     }
-
-    button:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); box-shadow: 0 4px 18px rgba(124,58,237,0.5); }
-    button:active:not(:disabled) { transform: translateY(0); }
-    button:disabled { opacity: 0.35; cursor: not-allowed; box-shadow: none; }
-
-    button.saved     { background: linear-gradient(135deg, #16a34a, #15803d); box-shadow: 0 2px 14px rgba(22,163,74,0.35); }
-    button.duplicate { background: linear-gradient(135deg, #2563eb, #1d4ed8); box-shadow: 0 2px 14px rgba(37,99,235,0.35); }
-    button.error     { background: linear-gradient(135deg, #dc2626, #b91c1c); box-shadow: 0 2px 14px rgba(220,38,38,0.35); }
-
     .spinner {
-      width: 13px; height: 13px;
-      border: 2px solid rgba(255,255,255,0.3);
-      border-top-color: #fff;
+      width: 14px; height: 14px;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
       border-radius: 50%;
-      animation: spin 0.6s linear infinite;
+      animation: spin .6s linear infinite;
+      opacity: .6;
       flex-shrink: 0;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── Status ── */
-    .status {
-      margin-top: 9px;
-      font-size: 11.5px;
-      color: #484855;
+    /* ── Login ───────────────────────────────────────────────────── */
+    .login-body {
+      padding: 28px 20px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
       text-align: center;
-      min-height: 15px;
-      line-height: 1.4;
-      padding: 0 2px;
+    }
+    .login-logo-wrap {
+      position: relative;
+      width: 52px; height: 52px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .login-svg { position: relative; z-index: 1; }
+    .login-glow {
+      position: absolute;
+      inset: -8px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(217,119,87,.25) 0%, transparent 70%);
+    }
+    .login-heading { font-size: 15px; font-weight: 600; color: var(--text); margin-top: -4px; }
+    .login-sub     { font-size: 12px; color: var(--text2); }
+
+    .login-form { width: 100%; display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+    .field {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 9px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      transition: border-color .18s, box-shadow .18s;
+    }
+    .field:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(217,119,87,.15); }
+    .field::placeholder { color: var(--muted); }
+
+    .btn-primary {
+      width: 100%;
+      padding: 10px;
+      background: linear-gradient(135deg, #C46640, #D97757);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      box-shadow: 0 2px 12px rgba(217,119,87,.35);
+      transition: opacity .15s, transform .1s;
+    }
+    .btn-primary:hover:not(:disabled) { opacity: .88; transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+
+    .login-error { font-size: 11.5px; color: var(--red); text-align: center; min-height: 16px; }
+
+    /* ── Main view ───────────────────────────────────────────────── */
+
+    /* Page card */
+    .page-card {
+      margin: 12px 14px 0;
+      padding: 11px 13px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+.page-info { min-width: 0; flex: 1; }
+    .page-title {
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 2px;
+    }
+    .page-title.muted { color: var(--muted); font-style: italic; font-weight: 400; }
+    .page-url {
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    .status.ok   { color: #86efac; }
-    .status.info { color: #93c5fd; }
-    .status.err  { color: #fca5a5; }
+    /* Save button area */
+    .save-area { padding: 10px 14px 0; }
+    .save-btn {
+      width: 100%;
+      padding: 10px;
+      background: linear-gradient(135deg, #C46640, #D97757);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      box-shadow: 0 2px 12px rgba(217,119,87,.3);
+      transition: opacity .15s, transform .1s, box-shadow .15s;
+    }
+    .save-btn:hover:not(:disabled) { opacity: .88; transform: translateY(-1px); box-shadow: 0 4px 18px rgba(217,119,87,.45); }
+    .save-btn:active:not(:disabled) { transform: translateY(0); }
+    .save-btn:disabled { opacity: .35; cursor: not-allowed; }
+    .save-btn.saved     { background: linear-gradient(135deg, #1a6640, #22a85c); box-shadow: 0 2px 12px rgba(34,168,92,.3); }
+    .save-btn.duplicate { background: rgba(255,255,255,.06); color: var(--text2); box-shadow: none; border: 1px solid var(--border2); }
+    .save-btn.error     { background: rgba(248,113,113,.15); color: var(--red); box-shadow: none; border: 1px solid rgba(248,113,113,.25); }
+    .save-btn.unsaveable { background: rgba(255,255,255,.04); color: var(--muted); box-shadow: none; cursor: not-allowed; }
+
+    /* Divider */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 14px 8px;
+    }
+    .divider-line { flex: 1; height: 1px; background: var(--border); }
+    .divider-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+
+    /* Recent items */
+    .recent-list { padding: 0 14px; display: flex; flex-direction: column; gap: 1px; }
+    .recent-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 9px;
+      border-radius: 8px;
+      cursor: default;
+      transition: background .15s;
+      text-decoration: none;
+    }
+    .recent-item:hover { background: var(--surface); }
+    .recent-title {
+      flex: 1;
+      font-size: 12.5px;
+      color: var(--text2);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .recent-date { font-size: 10.5px; color: var(--muted); flex-shrink: 0; }
+
+    .badge {
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      letter-spacing: .03em;
+    }
+    .badge-article { background: rgba(217,119,87,.15); color: #E8A882; }
+    .badge-youtube { background: rgba(248,113,113,.14); color: #fca5a5; }
+    .badge-pdf     { background: rgba(251,191,36,.14);  color: #fde68a; }
+    .badge-note    { background: rgba(52,211,153,.14);  color: #6ee7b7; }
+
+    .empty-recent {
+      padding: 12px 9px;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    /* Footer */
+    .footer {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px 13px;
+      margin-top: 6px;
+      border-top: 1px solid var(--border);
+    }
+    .footer-count { font-size: 11.5px; color: var(--muted); flex: 1; }
+    .footer-count span { color: var(--text2); font-weight: 600; }
+    .open-app-btn {
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--accent);
+      background: transparent;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: background .15s;
+    }
+    .open-app-btn:hover { background: rgba(217,119,87,.1); }
   </style>
 </head>
 <body>
 
+  <!-- Header (always visible) -->
   <div class="header">
-    <div class="logo-icon">🧠</div>
-    <span class="logo-text">Cortex</span>
-    <span class="tagline">second brain</span>
-  </div>
-
-  <div class="page-card">
-    <div class="favicon-wrap" id="favicon-wrap">🌐</div>
-    <div class="page-info">
-      <div class="page-title muted" id="page-title">Loading…</div>
-      <div class="page-url" id="url-display"></div>
+    <div class="header-logo">
+      <svg width="20" height="20" viewBox="0 0 40 40" fill="none">
+        <line x1="20" y1="20" x2="20" y2="7"  stroke="#D97757" stroke-width="1.2" stroke-linecap="round" opacity="0.55"/>
+        <line x1="20" y1="20" x2="32" y2="14" stroke="#D97757" stroke-width="1.2" stroke-linecap="round" opacity="0.45"/>
+        <line x1="20" y1="20" x2="30" y2="29" stroke="#D97757" stroke-width="1.2" stroke-linecap="round" opacity="0.40"/>
+        <line x1="20" y1="20" x2="11" y2="31" stroke="#D97757" stroke-width="1.2" stroke-linecap="round" opacity="0.38"/>
+        <line x1="20" y1="20" x2="8"  y2="16" stroke="#D97757" stroke-width="1.2" stroke-linecap="round" opacity="0.45"/>
+        <circle cx="20" cy="7"  r="2.8" fill="#D97757" opacity="0.75"/>
+        <circle cx="32" cy="14" r="2.2" fill="#D97757" opacity="0.62"/>
+        <circle cx="30" cy="29" r="2.5" fill="#D97757" opacity="0.52"/>
+        <circle cx="11" cy="31" r="2.0" fill="#D97757" opacity="0.48"/>
+        <circle cx="8"  cy="16" r="2.5" fill="#D97757" opacity="0.62"/>
+        <circle cx="20" cy="20" r="4.5" fill="#D97757"/>
+      </svg>
+      <span class="header-wordmark">Cortex</span>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn danger" id="logout-btn" title="Log out" style="display:none">⏻</button>
     </div>
   </div>
 
-  <div class="btn-area">
-    <button id="save-btn" disabled>Save to Cortex</button>
-    <div class="status" id="status"></div>
+  <!-- Loading -->
+  <div id="view-loading" class="view active">
+    <div class="loading-view">
+      <span class="spinner"></span>
+      Connecting…
+    </div>
+  </div>
+
+  <!-- Login -->
+  <div id="view-login" class="view">
+    <div class="login-body">
+      <div class="login-logo-wrap">
+        <div class="login-glow"></div>
+        <svg width="38" height="38" viewBox="0 0 40 40" fill="none" class="login-svg">
+          <line x1="20" y1="20" x2="20" y2="7"  stroke="#D97757" stroke-width="1.2" stroke-linecap="round" opacity="0.55"/>
+          <line x1="20" y1="20" x2="32" y2="14" stroke="#D97757" stroke-width="1.2" stroke-linecap="round" opacity="0.45"/>
+          <line x1="20" y1="20" x2="30" y2="29" stroke="#D97757" stroke-width="1.2" stroke-linecap="round" opacity="0.40"/>
+          <line x1="20" y1="20" x2="11" y2="31" stroke="#D97757" stroke-width="1.2" stroke-linecap="round" opacity="0.38"/>
+          <line x1="20" y1="20" x2="8"  y2="16" stroke="#D97757" stroke-width="1.2" stroke-linecap="round" opacity="0.45"/>
+          <circle cx="20" cy="7"  r="2.8" fill="#D97757" opacity="0.75"/>
+          <circle cx="32" cy="14" r="2.2" fill="#D97757" opacity="0.62"/>
+          <circle cx="30" cy="29" r="2.5" fill="#D97757" opacity="0.52"/>
+          <circle cx="11" cy="31" r="2.0" fill="#D97757" opacity="0.48"/>
+          <circle cx="8"  cy="16" r="2.5" fill="#D97757" opacity="0.62"/>
+          <circle cx="20" cy="20" r="4.5" fill="#D97757"/>
+        </svg>
+      </div>
+      <p class="login-heading">Sign in to Cortex</p>
+      <p class="login-sub">Enter your passphrase to continue</p>
+      <form class="login-form" id="login-form">
+        <input class="field" type="password" id="login-password" placeholder="Passphrase" autocomplete="current-password" />
+        <button class="btn-primary" type="submit" id="login-btn">Enter Cortex</button>
+        <p class="login-error" id="login-error"></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div id="view-main" class="view">
+    <!-- Current page -->
+    <div class="page-card">
+      <div class="page-info">
+        <div class="page-title" id="page-title">Loading…</div>
+        <div class="page-url"  id="page-url"></div>
+      </div>
+    </div>
+
+    <!-- Save button -->
+    <div class="save-area">
+      <button class="save-btn" id="save-btn" disabled>Save to Cortex</button>
+    </div>
+
+    <!-- Recent saves -->
+    <div class="divider">
+      <div class="divider-line"></div>
+      <span class="divider-label">Recent saves</span>
+      <div class="divider-line"></div>
+    </div>
+    <div class="recent-list" id="recent-list">
+      <div class="empty-recent">Loading…</div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <span class="footer-count" id="footer-count">— items saved</span>
+      <button class="open-app-btn" id="open-app-btn">Open app ↗</button>
+    </div>
   </div>
 
   <script src="popup.js"></script>
