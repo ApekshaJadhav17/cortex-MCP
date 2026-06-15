@@ -1,106 +1,211 @@
-# Cortex — The Memory Layer for Your AI
+# Cortex — Your Personal Knowledge Base, Wired Directly Into Claude
 
-> You read a brilliant article at 11pm. You watch a YouTube deep-dive on a topic you've been obsessing over. You paste notes from a meeting into a doc somewhere. Three weeks later, you're in a conversation and you *know* you have something relevant saved — but you can't find it. You search your bookmarks, your notes app, your browser history. Nothing surfaces what you actually need.
+> Imagine you're mid-conversation with Claude. You're researching a topic, asking questions, going deep. And Claude says: *"I don't have enough context on this."*
 >
-> That's the problem Cortex was built to solve.
+> But you do. You've saved a dozen articles on it. You've watched the YouTube lectures. You have PDFs, notes, highlights — weeks of accumulated understanding sitting in a tool Claude can't see.
+>
+> What if Claude could search your personal knowledge base the same way it uses any other tool? What if your second brain was a live service that Claude could query mid-conversation, on demand, without you copy-pasting anything?
+>
+> That's exactly what Cortex does.
+
+---
+
+## What Is Cortex?
+
+Cortex is a **personal second brain built as an MCP service** — a local RAG (Retrieval-Augmented Generation) system that you can feed with articles, YouTube transcripts, PDFs, and notes, and then expose directly to Claude Desktop as a set of native tools.
+
+The result: Claude can search your saved knowledge, save new things to it, and ground its answers in what *you* specifically have read and curated — not its general training data, not the internet, but your personal, private knowledge base.
+
+It also ships with a full React web UI and a Chrome extension for building up that knowledge base in the first place. But the MCP integration is the core of what makes this different.
 
 ---
 
 ## The Problem
 
-We are living through an information explosion. Every day, knowledge workers, researchers, developers, and curious people consume dozens of articles, videos, papers, and notes. The tools we use to save this information — bookmarks, highlights, note apps, read-later lists — are fundamentally keyword-based. They require you to remember *exactly* what you're looking for to find it.
+We are living through an information explosion. Every day, knowledge workers, researchers, and developers consume dozens of articles, videos, papers, and notes. The tools we use to save this content — bookmarks, highlights, read-later lists — are fundamentally keyword-based. They require you to remember *exactly* what you're looking for.
 
-But human memory doesn't work that way. You remember *ideas*, not exact phrases. You remember *concepts*, not filenames. You remember that something was *related* to what you're working on now — not the precise words the author used.
+But that's not the hard part. The hard part is this:
 
-The result: a graveyard of saved content that you never revisit, because retrieval is too painful to bother with.
+**Your AI assistant has no idea any of it exists.**
 
-**Existing solutions fall short:**
-- Bookmarks have no intelligence — they're just links
-- Note apps like Notion or Obsidian need manual tagging and organization to be useful
-- Services like Readwise are read-only surfaces — you can't *ask* your saved content questions
-- AI assistants like ChatGPT have no memory of what *you* specifically have read and saved
+Claude, ChatGPT, Gemini — all of them are powerful reasoners with enormous general knowledge. But they have no access to the articles you specifically curated, the lectures you took notes on, or the PDFs you marked up. Every conversation starts from zero. You are constantly re-explaining context that you've already read and processed. The AI is brilliant but blind to your personal knowledge.
 
-There was no tool that let you throw in content from anywhere — articles, YouTube transcripts, PDFs, raw notes — and then have a conversation with all of it as a unified knowledge base.
+**Existing solutions don't solve this:**
+- Bookmarks and note apps (Notion, Obsidian) have no AI interface — they're search tools, not reasoning tools
+- Services like Readwise surface highlights but don't let you *query* them
+- RAG demos exist everywhere, but they're standalone apps — disconnected from the AI tools you actually use
+- Nobody has made their second brain a *live service that their AI can call*
 
 ---
 
-## The Solution: Cortex
+## The Solution
 
-Cortex is a **personal second brain** built on top of a full Retrieval-Augmented Generation (RAG) pipeline. It lets you:
+Cortex bridges the gap by implementing the **Model Context Protocol (MCP)** — an open standard that lets AI models call external tools and services natively. By running Cortex as an MCP server, Claude Desktop gains four new capabilities at the tool level:
 
-1. **Save anything** — paste a URL (article, YouTube video, or PDF link), upload a PDF file, or write a note directly
-2. **Search semantically** — not by keyword, but by meaning. Ask "what did I read about transformer attention?" and get relevant chunks back even if you never used those exact words
-3. **Ask questions** — type a natural language question and get a streamed, cited answer generated from *your* saved content specifically
-4. **Use it inside Claude** — an MCP server exposes Cortex as a tool, so you can search and save your second brain mid-conversation without leaving Claude Desktop
-5. **Save from your browser** — a Chrome extension lets you capture any page with a single click while browsing
+- `search_cortex` — semantically search your knowledge base for anything relevant to what Claude is currently thinking about
+- `save_to_cortex` — save a URL (article, YouTube video, PDF) to your knowledge base without leaving the conversation
+- `save_note_to_cortex` — save a thought, insight, or note Claude helped you produce
+- `list_cortex` — see everything currently in your knowledge base
 
-Everything runs locally. No subscription. No data sent to a third party except the LLM inference call. Your knowledge base is yours.
+Claude decides when to call these tools the same way it decides to run code or search the web. You don't have to trigger anything manually. You just ask a question, and if the answer lives in your Cortex, Claude finds it.
+
+---
+
+## MCP Integration — The Core Differentiator
+
+Most second-brain tools are closed loops. You save things into them. You search things in them. The AI lives elsewhere. There is a wall between your curated knowledge and your AI assistant, and you are the one who has to manually carry information across that wall — by copy-pasting, summarising, or re-explaining.
+
+Cortex tears down that wall.
+
+### How It Works
+
+The MCP server (`backend/mcp_server.py`) runs as a local `stdio`-based process. Claude Desktop spawns it on startup and maintains a live connection to it for the duration of the session. When Claude determines that a tool call would help it answer a question better, it calls the tool, receives the result, and uses it to inform its response — all within the same conversational turn.
+
+```
+You:    "Explain how attention in transformers works, based on what I've saved."
+
+Claude: [internally calls search_cortex("attention mechanism transformers")]
+        [receives 5 chunks from your saved articles and lecture transcripts]
+        [generates answer grounded in your specific saved content]
+
+Claude: "Based on the articles you've saved — particularly the Illustrated
+         Transformer and the Andrej Karpathy lecture — attention works by..."
+```
+
+The answer isn't from Claude's training data. It's from your library. Claude is the reasoning engine; Cortex is the memory.
+
+### Real Conversation Examples
+
+**You've saved research papers on a topic and want to go deeper:**
+```
+You:   "What's the difference between RLHF and DPO? Use my saved notes."
+
+Claude: [calls search_cortex("RLHF DPO comparison")]
+        [retrieves chunks from your saved papers]
+        "From the papers you saved: RLHF requires a separate reward model
+         trained on human preference data, while DPO..."
+```
+
+**You encounter a new article mid-conversation and want to capture it:**
+```
+You:   "Save this for me: https://arxiv.org/abs/2310.06825"
+
+Claude: [calls save_to_cortex("https://arxiv.org/abs/2310.06825")]
+        "Saved 'Mistral 7B' — 18 chunks stored. It's in your Cortex now."
+```
+
+**You want to know what you already know:**
+```
+You:   "What do I have saved on vector databases?"
+
+Claude: [calls search_cortex("vector databases")]
+        "You have 3 items on this: a Qdrant architecture deep-dive,
+         a comparison of Pinecone vs Weaviate vs pgvector, and your
+         notes from a system design interview you did last month."
+```
+
+**You want Claude to help write a note and then save it:**
+```
+You:   "Summarise what we just discussed about chunking strategies
+        and save it as a note."
+
+Claude: [generates summary]
+        [calls save_note_to_cortex("Chunking Strategies", "...summary...")]
+        "Saved as a note — 3 chunks stored."
+```
+
+### Why MCP and Not a Custom Plugin or API Call?
+
+MCP is an open protocol designed specifically for this: connecting AI models to external tools with a standardised interface. Building on MCP means:
+
+- **No custom integration code in the model** — Claude natively understands how to call MCP tools, inspect results, and incorporate them into its reasoning
+- **Tool calling is autonomous** — Claude decides when to call `search_cortex` based on the conversation, without you prompting it every time
+- **Composable** — Cortex tools can be used alongside other MCP servers (filesystem, GitHub, web search) in the same session, and Claude can chain them
+
+This is the difference between building a demo and building a service. Cortex is not a standalone app that you have to switch to. It's infrastructure that plugs into the AI tool you're already using.
+
+### Setup
+
+Add this block to your Claude Desktop config:
+
+**Mac:** `~/Library/Application Support/Claude/claude_desktop_config.json`  
+**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "cortex": {
+      "command": "python",
+      "args": ["/absolute/path/to/cortex/backend/mcp_server.py"]
+    }
+  }
+}
+```
+
+Restart Claude Desktop. A tools icon will appear in the chat input. Cortex tools (`search_cortex`, `save_to_cortex`, `save_note_to_cortex`, `list_cortex`) will be listed there — and Claude will call them automatically when relevant.
+
+> **Note:** The MCP server reads the same Qdrant collection as the web UI and backend. Anything you save via the web app or Chrome extension is immediately searchable through Claude, and vice versa. It's one knowledge base with multiple ingestion surfaces.
 
 ---
 
 ## System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        CLIENT LAYER                                  │
-│                                                                       │
-│   ┌─────────────────────┐          ┌──────────────────────┐         │
-│   │   React Frontend     │          │   Chrome Extension   │         │
-│   │   (Vite, port 5173) │          │   (Manifest v3)      │         │
-│   │                     │          │                      │         │
-│   │  • Save URLs/Notes  │          │  • One-click save    │         │
-│   │  • Upload PDFs      │          │  • Active tab URL    │         │
-│   │  • Semantic search  │          │  • Status feedback   │         │
-│   │  • Ask Cortex (RAG) │          └──────────┬───────────┘         │
-│   │  • Library view     │                     │                     │
-│   └──────────┬──────────┘                     │                     │
-│              │  HTTP / SSE                    │ HTTP                │
-└──────────────┼────────────────────────────────┼─────────────────────┘
-               │                                │
-┌──────────────▼────────────────────────────────▼─────────────────────┐
-│                        FASTAPI BACKEND  (port 8000)                  │
-│                                                                       │
-│   ┌──────────────┐   ┌──────────────┐   ┌──────────────────────┐   │
-│   │  ingest.py   │   │   search.py  │   │       rag.py         │   │
-│   │              │   │              │   │                      │   │
-│   │ • URL fetch  │   │ • Embed query│   │ • Retrieve top-5     │   │
-│   │ • YouTube    │   │ • Cosine sim │   │ • Build context      │   │
-│   │   transcript │   │ • Qdrant     │   │ • Stream via Groq    │   │
-│   │ • PDF extract│   │   query      │   │ • SSE events         │   │
-│   │ • Note ingest│   │              │   │   (source/chunk/done)│   │
-│   │ • Chunking   │   └──────┬───────┘   └──────────────────────┘   │
-│   │ • Embedding  │          │                                        │
-│   │ • Dedup check│          │                                        │
-│   └──────┬───────┘          │                                        │
-│          │                  │                                        │
-└──────────┼──────────────────┼────────────────────────────────────────┘
-           │                  │
-           │   Vector upsert  │   Vector query
-           ▼                  ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│                    QDRANT VECTOR DB  (port 6333)                      │
-│                    Docker container: cortex-qdrant                    │
-│                    Collection: cortex  │  Dimensions: 384             │
-│                    Distance: Cosine    │  Embedder: all-MiniLM-L6-v2  │
-└──────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            CLIENT SURFACES                                   │
+│                                                                               │
+│  ┌──────────────────────┐   ┌────────────────────┐   ┌─────────────────┐   │
+│  │    Claude Desktop     │   │   React Frontend   │   │ Chrome Extension│   │
+│  │                      │   │   (Vite, :5173)    │   │  (Manifest v3)  │   │
+│  │  Calls MCP tools:    │   │                    │   │                 │   │
+│  │  • search_cortex     │   │  • Save URLs/Notes │   │  • One-click    │   │
+│  │  • save_to_cortex    │   │  • Upload PDFs     │   │    save current │   │
+│  │  • save_note_to_     │   │  • Semantic search │   │    tab to brain │   │
+│  │    cortex            │   │  • Ask (RAG/SSE)   │   │                 │   │
+│  │  • list_cortex       │   │  • Library view    │   │                 │   │
+│  └──────────┬───────────┘   └────────┬───────────┘   └────────┬────────┘   │
+│             │ stdio (MCP)            │ HTTP / SSE             │ HTTP       │
+└─────────────┼────────────────────────┼────────────────────────┼────────────┘
+              │                        │                        │
+    ┌─────────▼────────┐               │                        │
+    │   mcp_server.py  │               │                        │
+    │   (MCP handler)  │               │                        │
+    │                  │               │                        │
+    │  Imports ingest  ├───────────────▼────────────────────────▼────────────┐
+    │  and search      │            FASTAPI BACKEND  (port 8000)              │
+    │  directly        │                                                       │
+    └──────────────────┘  ┌─────────────┐  ┌────────────┐  ┌──────────────┐ │
+                          │  ingest.py  │  │  search.py │  │    rag.py    │ │
+                          │             │  │            │  │              │ │
+                          │ URL → fetch │  │ embed query│  │ top-5 chunks │ │
+                          │ YouTube     │  │ cosine sim │  │ Groq stream  │ │
+                          │ transcript  │  │ Qdrant     │  │ SSE events   │ │
+                          │ PDF extract │  │ query      │  │              │ │
+                          │ Note ingest │  └──────┬─────┘  └──────────────┘ │
+                          │ Chunk+embed │         │                           │
+                          │ Dedup check │         │                           │
+                          └──────┬──────┘         │                           │
+                                 │                │                           │
+                          └──────┼────────────────┼───────────────────────────┘
+                                 │                │
+                     ┌───────────▼────────────────▼──────────────┐
+                     │         QDRANT VECTOR DB  (port 6333)      │
+                     │         Docker: cortex-qdrant              │
+                     │                                            │
+                     │  Collection : cortex                       │
+                     │  Dimensions : 384                          │
+                     │  Distance   : Cosine                       │
+                     │  Embedder   : all-MiniLM-L6-v2 (local)    │
+                     └────────────────────────────────────────────┘
 
-           ┌──────────────────────────────────────────┐
-           │           MCP SERVER (stdio)              │
-           │           mcp_server.py                  │
-           │                                          │
-           │  Tools exposed to Claude Desktop:        │
-           │  • search_cortex(query)                  │
-           │  • save_to_cortex(url)                   │
-           │  • save_note_to_cortex(title, text)      │
-           │  • list_cortex()                         │
-           └──────────────────────────────────────────┘
-
-                                    ┌─────────────────┐
-                          LLM call  │   Groq Cloud     │
-                         ──────────►│  llama-3.3-70b  │
-                                    │  (streaming)     │
-                                    └─────────────────┘
+                                          ┌────────────────────┐
+                               LLM call   │    Groq Cloud       │
+                              ───────────►│  llama-3.3-70b      │
+                              (rag.py     │  (streaming, fast)  │
+                               only)      └────────────────────┘
 ```
+
+**One knowledge base, three entry points.** Whether you save content through the React UI, the Chrome extension, or by telling Claude to save it via MCP — it all lands in the same Qdrant collection. And it's all immediately searchable from any surface.
 
 ---
 
@@ -108,21 +213,21 @@ Everything runs locally. No subscription. No data sent to a third party except t
 
 ### Step 1: Ingestion
 
-When you submit a URL or file, Cortex figures out what kind of content it is and fetches it appropriately.
+When you submit a URL or file, Cortex detects the content type and fetches it accordingly.
 
-**Articles** are fetched using `trafilatura`, a library purpose-built for extracting clean article text from web pages — stripping ads, navigation, comments, and boilerplate. It also extracts the page title from metadata.
+**Articles** are fetched using `trafilatura` — a library purpose-built for extracting clean main text from web pages, stripping ads, navigation, sidebars, and boilerplate. It also extracts the page title from metadata.
 
-**YouTube videos** are handled by extracting the video ID from the URL, fetching the transcript via `youtube-transcript-api`, and retrieving the title via YouTube's oEmbed endpoint. This means you can save a 3-hour lecture and query its content without ever watching it.
+**YouTube videos** are handled by extracting the video ID from the URL, fetching the full transcript via `youtube-transcript-api`, and fetching the title via YouTube's oEmbed endpoint. You can save a 3-hour lecture and query its content without ever watching it.
 
-**PDFs** are supported both via URL (the backend fetches and parses it) and via direct file upload from the UI. Text extraction is handled by `pymupdf` (PyMuPDF / fitz), which reliably handles multi-page documents and reads embedded metadata for the title.
+**PDFs** are supported both via URL (the backend fetches and parses it) and via direct file upload through the UI. Text extraction uses `pymupdf` (PyMuPDF / fitz), which handles multi-page documents reliably and reads embedded metadata for the title.
 
-**Notes** are saved directly — no fetching required. The title is slugified into a `note://` URI scheme so it integrates cleanly with the rest of the storage model.
+**Notes** are saved directly — no fetching. The title is slugified into a `note://` URI so it fits cleanly into the unified storage model.
 
-**Duplicate detection** happens before any fetching. Qdrant is queried for an existing record with the same URL, and if one exists, a `DuplicateError` is raised immediately — saving API calls and giving the user specific feedback ("Already in your brain: *[title]*").
+**Duplicate detection** runs before any fetch. Qdrant is queried for an existing record with the same URL. If found, a `DuplicateError` is raised immediately — no wasted API calls, and the user gets specific feedback ("Already in your brain: *[title]*").
 
 ### Step 2: Chunking
 
-Once the raw text is extracted, it's split into overlapping chunks of 500 words with a 50-word overlap between adjacent chunks. Overlap ensures that ideas that span a chunk boundary aren't lost — the context bleeds across.
+Raw text is split into overlapping 500-word chunks with a 50-word overlap between adjacent chunks. Overlap ensures ideas that span a chunk boundary aren't severed — the tail of one chunk bleeds into the head of the next.
 
 Each chunk is prefixed with its source metadata before embedding:
 
@@ -134,41 +239,38 @@ Date: 2024-11-12T10:32:00
 The attention mechanism allows the model to weigh...
 ```
 
-This prefix means the embedding captures not just the content but context about *what kind of thing this is* — which subtly improves retrieval.
+This prefix means the embedding captures context about *what kind of thing this is and where it came from* — which improves retrieval quality across diverse content types.
 
 ### Step 3: Embedding
 
-Chunks are encoded using `sentence-transformers` with the `all-MiniLM-L6-v2` model. This model produces 384-dimensional dense vectors and runs entirely locally — no API call, no cost, no data leaving your machine.
+Chunks are encoded with `sentence-transformers` using `all-MiniLM-L6-v2`. This model produces 384-dimensional dense vectors and runs entirely locally — no API call, no cost, no data leaving your machine for the embedding step.
 
-Each chunk gets a unique Qdrant point ID derived from an MD5 hash of the source URL plus the chunk index, making upserts idempotent and collision-resistant. The full payload stored alongside each vector includes the title, URL, source type, date saved, chunk index, and the original chunk text.
+Each chunk gets a Qdrant point ID derived from an MD5 hash of the source URL plus its chunk index, making upserts deterministic and collision-resistant. The stored payload alongside each vector includes the title, URL, source type, date saved, chunk index, and original chunk text.
 
 ### Step 4: Semantic Search
 
-When you search, your query is embedded using the same model, producing a 384-dimensional vector. Qdrant performs a cosine similarity search across all stored vectors and returns the top-K most semantically similar chunks.
+At query time, the search string is embedded using the same model. Qdrant performs a cosine similarity search across all stored vectors and returns the top-K most semantically related chunks.
 
-Cosine similarity measures the angle between vectors in high-dimensional space — meaning two chunks can be considered "similar" even if they share no words in common, as long as they represent related ideas. This is what makes semantic search fundamentally different from keyword search.
+Cosine similarity measures the angle between vectors — two chunks can match even if they share no words, as long as they represent related ideas. This is what makes the difference between finding something and not finding it when you can't remember the exact phrasing.
 
 ### Step 5: RAG — Asking Cortex
 
-When you ask a question, the following sequence happens:
+When you ask a question (via the web UI, or when Claude calls the search tool):
 
-1. The question is semantically searched against your knowledge base (top 5 chunks)
-2. Sources are immediately emitted as SSE events so the frontend can render source chips before the answer starts streaming
-3. The top chunks are assembled into a context block, labeled and separated
-4. The context + question are sent to Groq's `llama-3.3-70b-versatile` model via LangChain
-5. The model streams its response back token by token
-6. Each token is wrapped in an SSE `chunk` event and sent to the frontend in real time
-7. A final `done` event closes the stream
-
-The system prompt explicitly instructs the model to answer *only* from the provided context and to cite sources as `[1]`, `[2]`, etc. — preventing hallucination and grounding every answer in things you actually saved.
+1. The question is semantically searched → top 5 chunks retrieved
+2. **In the web UI:** sources are emitted immediately as SSE events so the UI renders source chips before the answer starts
+3. The top chunks are assembled into a numbered context block
+4. Context + question go to Groq's `llama-3.3-70b-versatile` via LangChain
+5. The model streams its response token by token
+6. The system prompt instructs the model to answer *only* from the provided context and cite sources as `[1]`, `[2]`, etc. — grounding the answer and preventing hallucination
 
 ```
-User question: "What did I read about attention mechanisms?"
+Question: "What did I save about attention mechanisms?"
 
-→ Semantic search returns 5 chunks from saved articles/videos
-→ Groq receives: [system prompt] + [labeled context] + [question]
-→ Streams: "Attention mechanisms [1] allow the model to..."
-→ Frontend renders answer word by word with blinking cursor
+→ search_cortex retrieves 5 chunks from your saved articles/lectures
+→ Groq receives: [system prompt] + [numbered context] + [question]
+→ Streams: "Attention mechanisms [1] work by computing a weighted sum..."
+→ Web UI renders word by word; Claude Desktop gets the full response
 ```
 
 ---
@@ -177,19 +279,18 @@ User question: "What did I read about attention mechanisms?"
 
 | Layer | Technology | Why |
 |---|---|---|
-| Backend framework | FastAPI | Async-native, automatic OpenAPI docs, streaming response support |
-| Vector database | Qdrant | Local/self-hostable, fast cosine search, rich filtering, Docker-ready |
-| Embedding model | `all-MiniLM-L6-v2` | 384 dims, runs locally, excellent speed/quality tradeoff for semantic search |
-| LLM inference | Groq + `llama-3.3-70b` | Fastest available inference API, free tier, strong instruction following |
-| LLM orchestration | LangChain | Clean streaming chain abstraction with `StrOutputParser` |
-| Article extraction | trafilatura | Purpose-built for clean web text extraction, handles boilerplate removal |
-| PDF parsing | PyMuPDF (fitz) | Fast, reliable multi-page PDF text + metadata extraction |
-| YouTube | youtube-transcript-api | Fetches transcript directly without YouTube Data API quota |
-| HTTP client | httpx | Async-capable, used for PDF URL fetching and YouTube oEmbed |
-| Frontend | React + Vite | Fast dev experience, minimal bundle |
-| Browser extension | Chrome Manifest v3 | One-click save from any tab |
-| MCP server | `mcp` SDK | Exposes Cortex as tools to Claude Desktop |
-| DB transport | Qdrant Python client v1.18+ | `query_points()` API, cosine similarity search |
+| **AI tool protocol** | MCP (`mcp` SDK) | Open standard for exposing services as AI-callable tools — Claude Desktop calls Cortex natively |
+| Backend framework | FastAPI | Async-native, automatic OpenAPI docs, first-class `StreamingResponse` for SSE |
+| Vector database | Qdrant | Self-hostable, fast cosine search, rich payload filtering, Docker-ready, no API key |
+| Embedding model | `all-MiniLM-L6-v2` | 384 dims, runs fully locally on CPU, strong semantic similarity at minimal memory cost |
+| LLM inference | Groq + `llama-3.3-70b` | 500–800 tok/s inference — makes streaming feel instant; generous free tier |
+| LLM orchestration | LangChain | Clean streaming chain with `StrOutputParser`; swappable LLM backend |
+| Article extraction | trafilatura | Purpose-built for clean web text; handles boilerplate removal better than BeautifulSoup |
+| PDF parsing | PyMuPDF (fitz) | Fast multi-page text + metadata extraction; handles complex PDF layouts |
+| YouTube | youtube-transcript-api | Fetches transcripts without YouTube Data API quota |
+| HTTP client | httpx | Used for PDF URL fetching, YouTube oEmbed, and browser-header fallback fetching |
+| Frontend | React + Vite | Minimal, fast dev experience; no unnecessary abstraction |
+| Browser extension | Chrome Manifest v3 | One-click save from any browser tab |
 
 ---
 
@@ -198,18 +299,18 @@ User question: "What did I read about attention mechanisms?"
 ```
 cortex/
 ├── backend/
-│   ├── main.py           # FastAPI app — route definitions
-│   ├── ingest.py         # Content fetching, chunking, embedding, storage
+│   ├── main.py           # FastAPI app — all route definitions
+│   ├── ingest.py         # Content fetching, chunking, embedding, dedup, storage
 │   ├── search.py         # Semantic search against Qdrant
-│   ├── rag.py            # RAG pipeline — context assembly + Groq streaming
-│   ├── mcp_server.py     # MCP server exposing Cortex as Claude Desktop tools
+│   ├── rag.py            # RAG pipeline — context assembly + Groq SSE streaming
+│   ├── mcp_server.py     # MCP server — exposes Cortex as Claude Desktop tools
 │   ├── requirements.txt  # Python dependencies
-│   ├── .env              # Secrets (gitignored)
+│   ├── .env              # Secrets — gitignored
 │   └── .env.example      # Template for required environment variables
 │
 ├── cortex-ui/
 │   ├── src/
-│   │   ├── App.jsx       # Main UI — all four sections (save, search, ask, library)
+│   │   ├── App.jsx       # Main UI — save, search, ask, library
 │   │   ├── api.js        # Fetch wrappers for all backend endpoints
 │   │   ├── App.css       # Dark-themed component styles
 │   │   └── main.jsx      # React entry point
@@ -217,10 +318,10 @@ cortex/
 │   └── vite.config.js
 │
 ├── cortex-extension/
-│   ├── manifest.json     # Chrome Manifest v3 config
+│   ├── manifest.json     # Chrome Manifest v3
 │   ├── popup.html        # Extension popup UI
-│   ├── popup.js          # One-click save logic
-│   └── icons/            # Extension icons (16, 48, 128px)
+│   ├── popup.js          # One-click save — posts active tab URL to /ingest
+│   └── icons/
 │
 └── .gitignore
 ```
@@ -229,66 +330,37 @@ cortex/
 
 ## API Reference
 
-All endpoints are served by the FastAPI backend on `http://localhost:8000`. Interactive docs available at `http://localhost:8000/docs`.
+All endpoints served at `http://localhost:8000`. Interactive docs: `http://localhost:8000/docs`.
 
 ### `GET /health`
-Returns server status. Used to confirm the backend is reachable.
-
 ```json
 { "status": "ok" }
 ```
 
----
-
 ### `POST /ingest`
-Save a URL (article, YouTube video, or PDF link) to Cortex.
+Save a URL (article, YouTube, or PDF link).
 
-**Request:**
-```json
-{ "url": "https://example.com/article" }
-```
+**Request:** `{ "url": "https://..." }`
 
 **Response:**
 ```json
 {
   "title": "How Transformers Work",
-  "url": "https://example.com/article",
+  "url": "https://...",
   "source_type": "article",
   "chunks_stored": 14,
-  "date_saved": "2024-11-12T10:32:00.000000"
+  "date_saved": "2024-11-12T10:32:00"
 }
 ```
-
-**Errors:**
-- `409` — Already saved. Body includes `{ "already_saved": true, "title": "..." }`
-- `422` — Could not extract text from URL
-- `500` — Fetch or storage failure
-
----
+`409` if already saved (body: `{ "already_saved": true, "title": "..." }`).
 
 ### `POST /ingest/note`
-Save a plain-text or markdown note directly.
-
-**Request:**
-```json
-{ "title": "Meeting notes — Q4 planning", "text": "Key decisions were..." }
-```
-
-**Response:** Same shape as `/ingest`.
-
----
+**Request:** `{ "title": "...", "text": "..." }` — same response shape.
 
 ### `POST /ingest/file`
-Upload a PDF file for ingestion. Accepts `multipart/form-data` with a `file` field.
-
-**Response:** Same shape as `/ingest`. Source type will be `"pdf"`.
-
----
+`multipart/form-data` with a `file` field. PDF only. Same response shape, `source_type: "pdf"`.
 
 ### `GET /search?q={query}`
-Perform semantic search across your knowledge base.
-
-**Response:**
 ```json
 {
   "query": "attention mechanisms",
@@ -296,60 +368,33 @@ Perform semantic search across your knowledge base.
     {
       "score": 0.8741,
       "title": "How Transformers Work",
-      "url": "https://example.com/article",
+      "url": "https://...",
       "source_type": "article",
       "date_saved": "2024-11-12T10:32:00",
       "chunk_index": 3,
-      "text": "The attention mechanism allows the model to..."
+      "text": "The attention mechanism allows..."
     }
   ]
 }
 ```
 
----
-
-### `POST /ask`
-Ask a question against your saved content. Returns a **Server-Sent Events** stream.
-
-**Request:**
-```json
-{ "question": "What have I saved about RAG pipelines?" }
-```
-
-**SSE Event types:**
+### `POST /ask` — Server-Sent Events stream
+**Request:** `{ "question": "..." }`
 
 ```
 data: {"type": "source", "title": "...", "url": "...", "source_type": "...", "score": 0.87}
-
 data: {"type": "chunk", "content": "Based on your saved content, "}
-
-data: {"type": "chunk", "content": "RAG pipelines work by..."}
-
+data: {"type": "chunk", "content": "attention works by..."}
 data: {"type": "done"}
 ```
 
-Sources are emitted first, before the answer starts streaming, so the frontend can render them immediately.
-
----
+Sources are emitted before the answer starts streaming so the UI can render them immediately.
 
 ### `GET /items`
-Returns all saved items (deduplicated, sorted newest first).
-
-```json
-[
-  {
-    "title": "How Transformers Work",
-    "url": "https://example.com/article",
-    "source_type": "article",
-    "date_saved": "2024-11-12T10:32:00"
-  }
-]
-```
-
----
+All saved items, deduplicated, newest first.
 
 ### `DELETE /items/{url}`
-Remove all chunks associated with a URL from the vector store.
+Removes all vector chunks for the given URL.
 
 ---
 
@@ -366,12 +411,11 @@ Remove all chunks associated with a URL from the vector store.
 # First time only
 docker run -d --name cortex-qdrant -p 6333:6333 qdrant/qdrant
 
-# After first time
+# Subsequent starts
 docker start cortex-qdrant
 
 # Verify
-curl http://localhost:6333/healthz
-# → healthz check passed
+curl http://localhost:6333/healthz   # → healthz check passed
 ```
 
 ### 2. Configure environment
@@ -379,11 +423,9 @@ curl http://localhost:6333/healthz
 ```bash
 cd backend
 cp .env.example .env
-# Edit .env and add your Groq API key
-# Get one free at https://console.groq.com
+# Add your Groq API key — free at https://console.groq.com
 ```
 
-`.env` contents:
 ```
 GROQ_API_KEY=your_key_here
 QDRANT_URL=http://localhost:6333
@@ -396,7 +438,7 @@ cd backend
 pip install -r requirements.txt
 ```
 
-> On first run, `sentence-transformers` will download `all-MiniLM-L6-v2` (~90MB). This happens once and is cached locally.
+> `sentence-transformers` downloads `all-MiniLM-L6-v2` (~90MB) on first run. Cached after that.
 
 ### 4. Start the backend
 
@@ -405,39 +447,19 @@ cd backend
 python -m uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-Verify: `http://localhost:8000/health` → `{"status": "ok"}`
-
-Interactive API docs: `http://localhost:8000/docs`
-
 ### 5. Start the frontend
 
 ```bash
-cd cortex-ui
-npm install
-npm run dev
+cd cortex-ui && npm install && npm run dev
 ```
 
-Open `http://localhost:5173`
+Open `http://localhost:5173`.
 
-### 6. Install the Chrome extension (optional)
+### 6. Connect to Claude Desktop (MCP)
 
-1. Open Chrome → `chrome://extensions`
-2. Enable **Developer mode** (toggle, top right)
-3. Click **Load unpacked**
-4. Select the `cortex-extension/` folder
-5. The Cortex brain icon appears in your toolbar
+Add to your Claude Desktop config:
 
-Click it on any article, video, or page to save it instantly.
-
----
-
-## MCP Server — Use Cortex Inside Claude Desktop
-
-The MCP server lets Claude Desktop search and save to your Cortex knowledge base as native tools during any conversation.
-
-### Setup
-
-Add this to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+**Mac:** `~/Library/Application Support/Claude/claude_desktop_config.json`
 
 ```json
 {
@@ -450,47 +472,44 @@ Add this to your Claude Desktop config (`~/Library/Application Support/Claude/cl
 }
 ```
 
-Restart Claude Desktop. You'll see a tools icon in the chat input — Cortex tools will appear there.
+Restart Claude Desktop. Claude will now have access to `search_cortex`, `save_to_cortex`, `save_note_to_cortex`, and `list_cortex` as native tools in every conversation.
 
-### Available tools
+### 7. Install the Chrome extension (optional)
 
-| Tool | Description |
-|---|---|
-| `search_cortex` | Semantic search across your saved knowledge base |
-| `save_to_cortex` | Save a URL (article, YouTube, PDF) to your brain |
-| `save_note_to_cortex` | Save a plain text note |
-| `list_cortex` | List all saved items |
-
-**Example:** While chatting with Claude, you can say *"Search my Cortex for anything about diffusion models"* — Claude will call `search_cortex` and ground its response in your actual saved content.
+1. Chrome → `chrome://extensions` → enable **Developer mode**
+2. **Load unpacked** → select `cortex-extension/`
+3. Brain icon appears in toolbar — click to save any page
 
 ---
 
 ## Design Decisions & Tradeoffs
 
-**Why Qdrant over Pinecone or Weaviate?**
-Qdrant runs locally via Docker with zero configuration, has no API key, no usage limits, and a clean Python client. For a personal knowledge tool where the entire point is local ownership of your data, a self-hosted vector DB is the right default. Pinecone is excellent but introduces a dependency on an external service and a free tier limit.
+**Why MCP over a custom Claude plugin or a plain REST API the user manually calls?**
+MCP is an open standard with native Claude Desktop support. Claude decides when to call a tool based on conversational context — the user doesn't have to prompt it every time. A plain REST API would require you to manually copy-paste content into Claude. An MCP service means Claude reaches for your knowledge base the same way it reaches for any other capability.
 
-**Why `all-MiniLM-L6-v2` over larger embedding models?**
-It produces 384-dimensional vectors (vs 1536 for OpenAI's `text-embedding-3-small`), runs in milliseconds on CPU with no GPU required, and achieves competitive performance on semantic similarity benchmarks for general English text. For a personal knowledge base with hundreds to low thousands of chunks, it's the right tradeoff between speed, memory footprint, and quality.
+**Why Qdrant over Pinecone or pgvector?**
+Qdrant runs locally via Docker with no API key, no usage limits, and a clean Python client. For a personal knowledge tool where the entire point is local ownership of data, self-hosted is the right default. Pinecone is excellent for production multi-tenant deployments — not for this.
+
+**Why `all-MiniLM-L6-v2` over OpenAI embeddings?**
+It produces 384-dimensional vectors vs 1536 for `text-embedding-3-small`, runs in milliseconds on CPU, and achieves competitive semantic similarity performance for general English. For a personal knowledge base with thousands (not billions) of chunks, it's the correct tradeoff between speed, memory footprint, cost, and quality.
 
 **Why Groq for LLM inference?**
-Groq's LPU hardware delivers token generation speeds of 500–800 tokens/second on `llama-3.3-70b` — making the streaming UX feel near-instant. It has a generous free tier. `llama-3.3-70b-versatile` follows system prompt instructions reliably, which matters for the "answer only from context" constraint.
+Groq's LPU hardware delivers 500–800 tokens/second on `llama-3.3-70b` — making streaming responses feel near-instant. It has a generous free tier and `llama-3.3-70b-versatile` follows the "answer only from context" system prompt reliably, which is critical for a grounded RAG system.
 
-**Why SSE for streaming instead of WebSockets?**
-The ask flow is one-directional — server pushes chunks to the client. SSE is simpler than WebSockets for this pattern: no handshake upgrade, native browser support via `EventSource`, and easy to implement with FastAPI's `StreamingResponse`. The `X-Accel-Buffering: no` header disables Nginx proxy buffering so chunks arrive immediately.
+**Why SSE instead of WebSockets for streaming?**
+The ask flow is one-directional: server pushes tokens to client. SSE is simpler than WebSockets for this — no handshake upgrade, native browser support, straightforward with FastAPI's `StreamingResponse`. The `X-Accel-Buffering: no` header prevents Nginx proxy buffering so chunks arrive immediately.
 
 **Why chunk overlap?**
-Without overlap, an idea that happens to straddle a 500-word boundary gets cut in half — one half goes into chunk N, the other into chunk N+1. When either chunk is retrieved, the context is incomplete. A 50-word overlap means each chunk shares its tail with the next chunk's head, preserving continuity.
+An idea that straddles a 500-word boundary gets split across chunk N and chunk N+1. Retrieving either chunk alone gives incomplete context. A 50-word overlap ensures each chunk's tail appears in the next chunk's head — ideas at boundaries survive retrieval.
 
 ---
 
 ## What's Next
 
-- **Sentence-aware chunking** — replace word-count splitting with boundary-aware splitting using `spacy` or `nltk` so chunks never cut mid-sentence
-- **Re-ranking** — add a cross-encoder re-ranker pass over the top-K results before sending to the LLM, improving answer quality
-- **Query observability** — log every question, which chunks were retrieved, and retrieval scores so you can evaluate whether the RAG is performing well
-- **Pagination on `/items`** — the current implementation scrolls all Qdrant records into memory; add server-side pagination for larger knowledge bases
-- **Deployment** — Qdrant Cloud + Railway/Render for the backend + Vercel for the frontend, making Cortex accessible from anywhere
+- **Sentence-aware chunking** — replace word-count splitting with boundary-aware splitting (`spacy`/`nltk`) so chunks never cut mid-sentence
+- **Cross-encoder re-ranking** — pass the top-K semantic results through a cross-encoder before the LLM call to improve answer quality
+- **Query observability** — log every question, which chunks were retrieved, and their scores so retrieval quality can be evaluated and tuned
+- **Full deployment** — Qdrant Cloud + Railway/Render backend + Vercel frontend, with the MCP server pointed at the remote Qdrant instance
 
 ---
 
